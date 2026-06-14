@@ -39,8 +39,10 @@ export default function App() {
   const [authToast, setAuthToast] = useState('')
 
   useEffect(() => {
-    api.gmail.status().then(setGmailStatus)
-    api.auth.status().then(({ hasPassword, unlocked }) => setIsLocked(hasPassword && !unlocked))
+    api.gmail.status().then(setGmailStatus).catch(() => {})
+    api.auth.status()
+      .then(({ hasPassword, unlocked }) => setIsLocked(hasPassword && !unlocked))
+      .catch(() => setIsLocked(false))  // server unreachable → show app unlocked
 
     // Show toast if redirected back from Google OAuth
     const params = new URLSearchParams(location.search)
