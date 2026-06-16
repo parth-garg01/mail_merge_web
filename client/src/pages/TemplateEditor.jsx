@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useApp } from '../App'
 import api from '../api'
 
@@ -8,8 +8,10 @@ export default function TemplateEditor() {
   const [preview, setPreview] = useState({ subject: '', body: '' })
   const [validation, setValidation] = useState(null)
   const [previewMode, setPreviewMode] = useState('html')
+  const [uploading, setUploading] = useState(false)
+  const attachInputRef = useRef(null)
 
-  const { sheetData, subjectTemplate, bodyTemplate } = wizard
+  const { sheetData, subjectTemplate, bodyTemplate, attachments = [] } = wizard
   const headers = sheetData?.headers || []
   const rows = sheetData?.rows || []
 
@@ -37,6 +39,22 @@ export default function TemplateEditor() {
 
   function insertField(field) {
     updateWizard({ bodyTemplate: (bodyTemplate || '') + `{{${field}}}` })
+  }
+
+  async function handleAttachFiles(e) {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    setUploading(true)
+    const results = await Promise.all(files.map(f => api.attachment.upload(f)))
+    const added = results.filter(r => r?.success).map(r => r.attachment)
+    if (added.length) updateWizard({ attachments: [...attachments, ...added] })
+    e.target.value = ''
+    setUploading(false)
+  }
+
+  async function handleRemoveAttachment(id) {
+    await api.attachment.remove(id)
+    updateWizard({ attachments: attachments.filter(a => a.id !== id) })
   }
 
   return (
@@ -97,6 +115,50 @@ export default function TemplateEditor() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="card py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-slate-200">Attachments</h3>
+              <button
+                type="button"
+                onClick={() => attachInputRef.current.click()}
+                disabled={uploading}
+                className="btn-secondary text-xs py-1.5 px-3"
+              >
+                {uploading ? 'Uploading…' : '+ Add File'}
+              </button>
+              <input
+                ref={attachInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleAttachFiles}
+              />
+            </div>
+            {attachments.length > 0 ? (
+              <div className="space-y-2">
+                {attachments.map(a => (
+                  <div key={a.id} className="flex items-center justify-between p-2 bg-slate-700/50 rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-400 shrink-0">
+                        <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-slate-300 text-xs truncate">{a.name}</span>
+                      <span className="text-slate-500 text-xs shrink-0">({(a.size / 1024).toFixed(0)} KB)</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveAttachment(a.id)}
+                      className="text-slate-500 hover:text-red-400 text-xs ml-3 shrink-0 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">No attachments. PDFs, Word docs, images — up to 25 MB each.</p>
+            )}
           </div>
 
           <div className="flex gap-3">

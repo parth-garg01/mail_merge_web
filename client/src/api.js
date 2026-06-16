@@ -31,6 +31,15 @@ const api = {
     validate: (params) => call('POST', '/sheet/validate', params)
   },
 
+  attachment: {
+    upload: (file) => {
+      const form = new FormData()
+      form.append('file', file)
+      return fetch(`${BASE}/attachments/upload`, { method: 'POST', body: form }).then(r => r.json())
+    },
+    remove: (id) => call('DELETE', `/attachments/${id}`)
+  },
+
   template: {
     validate: (params) => call('POST', '/template/validate', params),
     preview: (params) => call('POST', '/template/preview', params)

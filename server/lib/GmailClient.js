@@ -1,4 +1,5 @@
 const { google } = require('googleapis')
+const fs = require('fs')
 const Store = require('../store')
 
 const tokenStore = new Store('auth-tokens')
@@ -80,27 +81,59 @@ class GmailClient {
     tokenStore.clear()
   }
 
-  _buildRawMessage(from, to, subject, body) {
+  _buildRawMessage(from, to, subject, body, attachments = []) {
     const htmlBody = plainTextToHtml(body)
-    const msg = [
+    const subjectEncoded = `=?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`
+
+    if (attachments.length === 0) {
+      const msg = [
+        `From: ${from}`,
+        `To: ${to}`,
+        `Subject: ${subjectEncoded}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        'Content-Transfer-Encoding: base64',
+        '',
+        Buffer.from(htmlBody).toString('base64')
+      ].join('\r\n')
+      return Buffer.from(msg).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    }
+
+    const boundary = `mmw_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    const lines = [
       `From: ${from}`,
       `To: ${to}`,
-      `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+      `Subject: ${subjectEncoded}`,
       'MIME-Version: 1.0',
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
       'Content-Type: text/html; charset=utf-8',
       'Content-Transfer-Encoding: base64',
       '',
       Buffer.from(htmlBody).toString('base64')
-    ].join('\r\n')
+    ]
 
-    return Buffer.from(msg)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
+    for (const att of attachments) {
+      const content = fs.readFileSync(att.path)
+      const safeName = att.name.replace(/"/g, '')
+      lines.push(
+        '',
+        `--${boundary}`,
+        `Content-Type: ${att.mimetype || 'application/octet-stream'}; name="${safeName}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${safeName}"`,
+        '',
+        content.toString('base64')
+      )
+    }
+
+    lines.push('', `--${boundary}--`)
+    const msg = lines.join('\r\n')
+    return Buffer.from(msg).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   }
 
-  async send(to, subject, body) {
+  async send(to, subject, body, attachments = []) {
     if (!this.isAuthenticated()) throw new Error('Not authenticated. Please connect Gmail first.')
     if (!this.oauth2Client) throw new Error('GmailClient not initialized.')
 
@@ -108,7 +141,7 @@ class GmailClient {
 
     const from = this.getConnectedEmail() || 'me'
     const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client })
-    const raw = this._buildRawMessage(from, to, subject, body)
+    const raw = this._buildRawMessage(from, to, subject, body, attachments)
 
     const response = await gmail.users.messages.send({
       userId: 'me',

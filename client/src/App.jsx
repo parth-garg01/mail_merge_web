@@ -19,6 +19,7 @@ const DEFAULT_WIZARD = {
   emailColumn: '',
   subjectTemplate: '',
   bodyTemplate: '',
+  attachments: [],
   campaignName: '',
   schedule: {
     startAt: '',

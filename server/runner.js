@@ -93,7 +93,7 @@ async function runCampaign(campaignId, campaign, saveCampaignFn) {
     sendQueue.updateStatus(campaignId, recipient.id, 'sending')
 
     try {
-      await gmailClient.send(recipient.email, subject, body)
+      await gmailClient.send(recipient.email, subject, body, campaign.attachments || [])
       const updated = sendQueue.updateStatus(campaignId, recipient.id, 'sent', {
         sentAt: new Date().toISOString()
       })

@@ -9,7 +9,7 @@ export default function ScheduleConfig() {
   const [launching, setLaunching] = useState(false)
   const [error, setError] = useState('')
 
-  const { schedule, campaignName, sheetData, emailColumn, subjectTemplate, bodyTemplate } = wizard
+  const { schedule, campaignName, sheetData, emailColumn, subjectTemplate, bodyTemplate, attachments = [] } = wizard
 
   function setSchedule(patch) {
     updateWizard({ schedule: { ...schedule, ...patch } })
@@ -50,6 +50,7 @@ export default function ScheduleConfig() {
         emailColumn,
         subjectTemplate,
         bodyTemplate,
+        attachments,
         schedule
       })
 
@@ -174,6 +175,9 @@ export default function ScheduleConfig() {
             <p>• Sending window: <strong className="text-slate-300">{schedule.windowStart} – {schedule.windowEnd}</strong></p>
             <p>• Interval: <strong className="text-slate-300">{schedule.intervalMinutes} min</strong> between emails</p>
             <p>• Allowed days: <strong className="text-slate-300">{schedule.allowedDays.join(', ')}</strong></p>
+            {attachments.length > 0 && (
+              <p>• <strong className="text-slate-300">{attachments.length}</strong> attachment{attachments.length > 1 ? 's' : ''}: {attachments.map(a => a.name).join(', ')}</p>
+            )}
           </div>
         </div>
 

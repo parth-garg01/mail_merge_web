@@ -50,6 +50,7 @@ app.use('/api', (req, res, next) => {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.use('/api/auth', require('./routes/auth')(configStore))
+app.use('/api/attachments', require('./routes/attachment'))
 app.use('/api/sheet', require('./routes/sheet'))
 app.use('/api/template', require('./routes/template'))
 app.use('/api/gmail', require('./routes/gmail')(configStore))
