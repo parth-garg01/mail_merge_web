@@ -77,6 +77,9 @@ server.on('upgrade', (req, socket, head) => {
   })
 })
 
+// Liveness probe for the hosting platform
+app.get('/healthz', (req, res) => res.send('ok'))
+
 // Auth guard — all /api routes except /api/auth require unlock when password is set
 app.use('/api', (req, res, next) => {
   if (req.path.startsWith('/auth')) return next()

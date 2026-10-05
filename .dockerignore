@@ -1,0 +1,7 @@
+node_modules
+server/public
+.git
+.env
+data
+graphify-out
+*.log

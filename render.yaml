@@ -1,0 +1,22 @@
+# Render blueprint: one always-on web service with a small persistent disk.
+# The free plan sleeps when idle and has no disk, so scheduled sends would stop.
+services:
+  - type: web
+    name: smart-mail-merger
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: APP_PASSWORD
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Sending windows and start times are read in this timezone
+      - key: TZ
+        value: Asia/Kolkata
