@@ -4,6 +4,7 @@ const session = require('express-session')
 const { WebSocketServer } = require('ws')
 const http = require('http')
 const path = require('path')
+const crypto = require('crypto')
 
 const { PORT, PUBLIC_URL } = require('./config')
 const Store = require('./store')
@@ -33,12 +34,25 @@ runner.setBroadcast(broadcast)
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+// Cloud hosts terminate TLS at a proxy; trust it so secure cookies and req.ip work.
+app.set('trust proxy', 1)
+
+// No env var needed: a random secret is generated once and kept with the app data.
+let sessionSecret = process.env.SESSION_SECRET || configStore.get('sessionSecret')
+if (!sessionSecret) {
+  sessionSecret = crypto.randomBytes(32).toString('hex')
+  configStore.set('sessionSecret', sessionSecret)
+}
+
+// ponytail: in-memory sessions, a restart means unlocking again. Swap in a
+// file or Redis store if that gets annoying.
+const sessionParser = session({
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
-}))
+  cookie: { secure: 'auto', httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }
+})
+app.use(sessionParser)
 
 // Auth guard — all /api routes except /api/auth require unlock when password is set
 app.use('/api', (req, res, next) => {
