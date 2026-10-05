@@ -1,37 +1,22 @@
 const XLSX = require('xlsx')
-const path = require('path')
 
 class SheetParser {
-  // Parse from a file path (not used in web, kept for completeness)
-  parse(filePath) {
-    const workbook = XLSX.readFile(filePath, { cellText: true, cellDates: false })
-    return this._extractData(workbook)
-  }
-
   // Parse from an in-memory buffer (multer upload)
-  parseBuffer(buffer, originalname) {
+  parseBuffer(buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer', cellText: true, cellDates: false })
-    return this._extractData(workbook)
-  }
-
-  _extractData(workbook) {
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
-
     if (!worksheet['!ref']) throw new Error('The sheet appears to be empty.')
+    return this.fromRows(XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }), sheetName)
+  }
 
-    const range = XLSX.utils.decode_range(worksheet['!ref'])
+  // Shared by uploads and Google Sheets: first row is the header, the rest are records
+  fromRows(rawRows, sheetName) {
+    if (!rawRows.length) throw new Error('The sheet appears to be empty.')
+    const width = Math.max(...rawRows.map(r => r.length))
+    const headers = Array.from({ length: width }, (_, i) => String(rawRows[0][i] ?? '').trim() || `Column${i + 1}`)
 
-    const headers = []
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const addr = XLSX.utils.encode_cell({ r: range.s.r, c: col })
-      const cell = worksheet[addr]
-      const header = cell ? String(cell.v).trim() : `Column${col + 1}`
-      headers.push(header)
-    }
-
-    const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
-    const dataRows = rawRows
+    const rows = rawRows
       .slice(1)
       .map((row, idx) => {
         const record = { _rowIndex: idx + 1 }
@@ -42,7 +27,19 @@ class SheetParser {
       })
       .filter(row => headers.some(h => row[h] !== ''))
 
-    return { headers, rows: dataRows, sheetName }
+    return { headers, rows, sheetName }
+  }
+
+  // Pulls the spreadsheet id and tab (gid) out of a Google Sheets link
+  parseSheetUrl(url) {
+    const id = /\/spreadsheets\/d\/([\w-]+)/.exec(String(url || ''))?.[1]
+    if (!id) throw new Error('That does not look like a Google Sheets link.')
+    const gid = /[#?&]gid=(\d+)/.exec(url)?.[1]
+    return { spreadsheetId: id, gid: gid === undefined ? null : Number(gid) }
+  }
+
+  isEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
   }
 
   validate(parsed, emailColumn) {
@@ -55,12 +52,11 @@ class SheetParser {
       return { valid: false, errors, warnings }
     }
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     rows.forEach((row, idx) => {
       const email = row[emailColumn]
       if (!email) {
         warnings.push(`Row ${idx + 2}: missing email address (will be skipped)`)
-      } else if (!emailPattern.test(email)) {
+      } else if (!this.isEmail(email)) {
         errors.push(`Row ${idx + 2}: invalid email "${email}"`)
       }
     })

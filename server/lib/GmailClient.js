@@ -48,6 +48,7 @@ class GmailClient {
       scope: [
         'https://www.googleapis.com/auth/gmail.send',
         'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/spreadsheets.readonly',
         'https://www.googleapis.com/auth/userinfo.email'
       ],
       prompt: 'consent'
@@ -135,6 +136,28 @@ class GmailClient {
     lines.push('', `--${boundary}--`)
     const msg = lines.join('\r\n')
     return Buffer.from(msg).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+
+  // Reads one tab of a Google Sheet as rows of cell values, using the connected account
+  async readSheet({ spreadsheetId, gid }) {
+    if (!this.isAuthenticated() || !this.oauth2Client) throw new Error('Connect your Google account in Settings first.')
+    const sheets = google.sheets({ version: 'v4', auth: this.oauth2Client })
+    try {
+      const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties(sheetId,title)' })
+      const tabs = meta.data.sheets.map(s => s.properties)
+      const tab = gid === null ? tabs[0] : tabs.find(t => t.sheetId === gid)
+      if (!tab) throw new Error('That tab no longer exists in the sheet.')
+      const { data } = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${tab.title.replace(/'/g, "''")}'` })
+      return { values: data.values || [], sheetName: tab.title }
+    } catch (err) {
+      const status = err?.response?.status
+      if (status === 403 && /scope/i.test(err.message)) {
+        throw new Error('Google Sheets access was not granted. Disconnect and reconnect your Google account in Settings.')
+      }
+      if (status === 403) throw new Error('The connected Google account cannot open this sheet.')
+      if (status === 404) throw new Error('Sheet not found. Check the link.')
+      throw err
+    }
   }
 
   async send(to, subject, body, attachments = []) {
