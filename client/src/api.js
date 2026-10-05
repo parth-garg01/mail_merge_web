@@ -65,6 +65,7 @@ const api = {
     pause: (id) => call('POST', `/campaigns/${id}/pause`),
     resume: (id) => call('POST', `/campaigns/${id}/resume`),
     stop: (id) => call('POST', `/campaigns/${id}/stop`),
+    sync: (id) => call('POST', `/campaigns/${id}/sync`),
     updateSchedule: ({ campaignId, schedule }) =>
       call('PUT', `/campaigns/${campaignId}/schedule`, { schedule })
   },

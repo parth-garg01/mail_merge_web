@@ -43,6 +43,7 @@ export default function CampaignMonitor() {
   const [schedForm, setSchedForm] = useState(DEFAULT_SCHED)
   const [schedSaving, setSchedSaving] = useState(false)
   const [schedError, setSchedError] = useState('')
+  const [syncing, setSyncing] = useState(false)
 
   const load = useCallback(async () => {
     if (!activeCampaignId) return
@@ -71,6 +72,11 @@ export default function CampaignMonitor() {
       setNextSendAt(Date.now() + msToWait)
     }
 
+    const onIdle = () => { setNextSendAt(null); setCountdown(0); setWaitMsg(''); load() }
+    const onSynced = ({ added }) => { if (added) setWaitMsg(''); load() }
+
+    wsOn('campaign:idle', onIdle)
+    wsOn('campaign:synced', onSynced)
     wsOn('campaign:sent', onSent)
     wsOn('campaign:failed', onFailed)
     wsOn('campaign:complete', onComplete)
@@ -78,6 +84,8 @@ export default function CampaignMonitor() {
     wsOn('campaign:waiting', onWaiting)
 
     return () => {
+      wsOff('campaign:idle', onIdle)
+      wsOff('campaign:synced', onSynced)
       wsOff('campaign:sent', onSent)
       wsOff('campaign:failed', onFailed)
       wsOff('campaign:complete', onComplete)
@@ -107,6 +115,14 @@ export default function CampaignMonitor() {
   async function handleStop() {
     if (!confirm('Stop this campaign? This cannot be undone.')) return
     await api.campaign.stop(activeCampaignId)
+    load()
+  }
+
+  async function handleSync() {
+    setSyncing(true)
+    // A failed check is saved on the campaign, so reloading shows it on the sheet card
+    await api.campaign.sync(activeCampaignId)
+    setSyncing(false)
     load()
   }
 
@@ -167,6 +183,7 @@ export default function CampaignMonitor() {
   const filtered = filter === 'all' ? queue : queue.filter(r => r.status === filter)
   const isRunning = campaign?.status === 'running'
   const isPaused = campaign?.status === 'paused'
+  const watching = isRunning && campaign?.autoSync && !stats.pending && !stats.sending
 
   if (!activeCampaignId) {
     return (
@@ -184,12 +201,14 @@ export default function CampaignMonitor() {
           <h1 className="text-2xl font-bold text-slate-100">{campaign?.name || 'Campaign Monitor'}</h1>
           <div className="flex items-center gap-3 mt-2">
             {campaign && <StatusBadge status={campaign.status} pulse />}
-            {isRunning && countdown > 0 && (
+            {isRunning && !watching && countdown > 0 && (
               <span className="text-xs text-slate-400">
                 Next send in <strong className="text-slate-200">{formatMs(countdown)}</strong>
               </span>
             )}
-            {waitMsg && <span className="text-xs text-amber-400">{waitMsg}</span>}
+            {watching
+              ? <span className="text-xs text-green-400">Watching the sheet for new rows</span>
+              : waitMsg && <span className="text-xs text-amber-400">{waitMsg}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -207,6 +226,25 @@ export default function CampaignMonitor() {
           <button onClick={() => navigate('logs')} className="btn-secondary">View Logs</button>
         </div>
       </div>
+
+      {campaign?.sheetUrl && (
+        <div className="card mb-6 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-200">
+              Google Sheet {campaign.autoSync ? <span className="text-green-400 font-normal">· watching for new rows</span> : <span className="text-slate-500 font-normal">· not watching</span>}
+            </p>
+            <p className="text-xs mt-1 truncate">
+              {campaign.syncError
+                ? <span className="text-red-400">Last check failed: {campaign.syncError}</span>
+                : <span className="text-slate-500">{campaign.lastSyncAt ? `Last checked ${new Date(campaign.lastSyncAt).toLocaleString()}` : 'Not checked yet'}</span>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a href={campaign.sheetUrl} target="_blank" rel="noreferrer" className="btn-secondary">Open Sheet</a>
+            <button onClick={handleSync} disabled={syncing} className="btn-secondary">{syncing ? 'Checking…' : 'Check Now'}</button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[

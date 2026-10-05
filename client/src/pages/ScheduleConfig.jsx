@@ -9,7 +9,7 @@ export default function ScheduleConfig() {
   const [launching, setLaunching] = useState(false)
   const [error, setError] = useState('')
 
-  const { schedule, campaignName, sheetData, emailColumn, subjectTemplate, bodyTemplate, attachments = [] } = wizard
+  const { schedule, campaignName, sheetData, emailColumn, subjectTemplate, bodyTemplate, attachments = [], sheetUrl, autoSync } = wizard
 
   function setSchedule(patch) {
     updateWizard({ schedule: { ...schedule, ...patch } })
@@ -51,7 +51,9 @@ export default function ScheduleConfig() {
         subjectTemplate,
         bodyTemplate,
         attachments,
-        schedule
+        schedule,
+        sheetUrl,
+        autoSync: !!sheetUrl && autoSync
       })
 
       if (!success) throw new Error(cerr)
@@ -167,6 +169,23 @@ export default function ScheduleConfig() {
           </div>
           <p className="text-slate-500 text-xs mt-3">±30 second random jitter is added to each interval.</p>
         </div>
+
+        {sheetUrl && (
+          <label className="card flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoSync}
+              onChange={e => updateWizard({ autoSync: e.target.checked })}
+              className="mt-1 accent-indigo-500"
+            />
+            <span>
+              <span className="block text-sm font-medium text-slate-200">Keep watching this Google Sheet</span>
+              <span className="block text-slate-500 text-xs mt-1">
+                Rows added to the sheet later are emailed automatically on this schedule. The campaign stays running until you stop it.
+              </span>
+            </span>
+          </label>
+        )}
 
         <div className="bg-indigo-900/20 border border-indigo-700/40 rounded-xl p-4 text-sm">
           <p className="text-indigo-300 font-medium mb-2">Campaign Summary</p>
