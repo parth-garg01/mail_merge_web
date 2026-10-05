@@ -1,5 +1,6 @@
 const Store = require('../store')
 const { v4: uuidv4 } = require('uuid')
+const sheetParser = require('./SheetParser')
 
 const store = new Store('send-queue')
 
@@ -24,6 +25,31 @@ class SendQueue {
 
     store.set(`q.${campaignId}`, queue)
     return queue
+  }
+
+  // Adds sheet rows whose address is not in the queue yet and returns them.
+  // Blank or malformed addresses are left out rather than marked skipped, so a
+  // half-typed row is picked up on a later sync once it is finished.
+  appendNew(campaignId, rows, emailColumn) {
+    const queue = this.getQueue(campaignId)
+    const seen = new Set(queue.map(r => String(r.email || '').toLowerCase()))
+    const added = []
+    for (const row of rows) {
+      const email = row[emailColumn] || ''
+      if (!sheetParser.isEmail(email) || seen.has(email.toLowerCase())) continue
+      seen.add(email.toLowerCase())
+      added.push({
+        id: uuidv4(),
+        rowIndex: row._rowIndex,
+        email,
+        fields: { ...row },
+        status: 'pending',
+        sentAt: null,
+        errorMessage: null
+      })
+    }
+    if (added.length) this.setQueue(campaignId, [...queue, ...added])
+    return added
   }
 
   getQueue(campaignId) {
