@@ -51,6 +51,13 @@ async function runCampaign(campaignId, campaign, saveCampaignFn) {
     const cfg = ctx.cfg
 
     if (!sendQueue.hasPending(campaignId)) {
+      if (campaign.autoSync && campaign.sheetUrl) {
+        // Linked to a live sheet: stay running and let sheetSync start us again
+        // when new rows show up.
+        notify('campaign:idle', { campaignId })
+        delete activeCampaigns[campaignId]
+        return
+      }
       campaign.status = 'completed'
       saveCampaignFn(campaign)
       notify('campaign:complete', { campaignId })

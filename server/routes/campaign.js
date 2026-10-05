@@ -4,6 +4,7 @@ const scheduleController = require('../lib/ScheduleController')
 const sendQueue = require('../lib/SendQueue')
 const logger = require('../lib/Logger')
 const { activeCampaigns, runCampaign, buildCfg } = require('../runner')
+const { syncCampaign } = require('../sheetSync')
 const router = express.Router()
 
 module.exports = function (configStore) {
@@ -124,6 +125,11 @@ module.exports = function (configStore) {
       saveCampaign(campaigns[req.params.id])
     }
     res.json({ success: true })
+  })
+
+  // Pull new rows from the linked Google Sheet right now
+  router.post('/:id/sync', async (req, res) => {
+    res.json(await syncCampaign(req.params.id))
   })
 
   // Update schedule

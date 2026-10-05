@@ -13,6 +13,7 @@ const gmailClient = require('./lib/GmailClient')
 const logger = require('./lib/Logger')
 const runner = require('./runner')
 const sendQueue = require('./lib/SendQueue')
+const sheetSync = require('./sheetSync')
 
 const configStore = new Store('app-config')
 
@@ -140,17 +141,13 @@ if (clientId && clientSecret) {
 const campaigns = configStore.get('campaigns', {})
 for (const [id, c] of Object.entries(campaigns)) {
   if (c.status === 'running') {
-    function makeSave(store) {
-      return function (campaign) {
-        const all = store.get('campaigns', {})
-        all[campaign.id] = { ...campaign, updatedAt: new Date().toISOString() }
-        store.set('campaigns', all)
-      }
-    }
     sendQueue.recoverSending(id)
-    runner.runCampaign(id, c, makeSave(configStore))
+    runner.runCampaign(id, c, sheetSync.saveCampaign)
   }
 }
+
+// Keep watching linked Google Sheets for new rows
+sheetSync.start(configStore)
 
 server.listen(PORT, () => {
   console.log(`Smart Mail Merger running at ${PUBLIC_URL}`)
