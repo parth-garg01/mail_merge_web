@@ -16,6 +16,8 @@ export const useApp = () => useContext(AppContext)
 const DEFAULT_WIZARD = {
   sheetData: null,
   sheetFile: null,
+  sheetUrl: '',
+  autoSync: true,
   emailColumn: '',
   subjectTemplate: '',
   bodyTemplate: '',

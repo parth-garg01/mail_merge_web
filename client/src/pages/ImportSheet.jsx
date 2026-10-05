@@ -7,6 +7,7 @@ export default function ImportSheet() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [validationResult, setValidationResult] = useState(null)
+  const [sheetUrl, setSheetUrl] = useState('')
   const fileInputRef = useRef(null)
 
   async function handleFileChange(e) {
@@ -24,11 +25,36 @@ export default function ImportSheet() {
       }
       updateWizard({
         sheetFile: file,
+        sheetUrl: '',
         sheetData: result.data,
         emailColumn: result.data.headers.find(h => h.toLowerCase().includes('email')) || result.data.headers[0] || ''
       })
     } catch (err) {
       setError(err.message || 'Could not parse the spreadsheet.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleImport(e) {
+    e.preventDefault()
+    setError('')
+    setValidationResult(null)
+    setLoading(true)
+    try {
+      const result = await api.sheet.fromGoogle(sheetUrl.trim())
+      if (!result.success) {
+        setError(result.error || 'Could not read that sheet.')
+        return
+      }
+      updateWizard({
+        sheetFile: { name: result.data.sheetName },
+        sheetUrl: sheetUrl.trim(),
+        sheetData: result.data,
+        emailColumn: result.data.headers.find(h => h.toLowerCase().includes('email')) || result.data.headers[0] || ''
+      })
+    } catch (err) {
+      setError(err.message || 'Could not read that sheet.')
     } finally {
       setLoading(false)
     }
@@ -56,12 +82,35 @@ export default function ImportSheet() {
           <span>→</span><span>Step 2</span>
           <span>→</span><span>Step 3</span>
         </div>
-        <h1 className="text-2xl font-bold text-slate-100">Import Spreadsheet</h1>
-        <p className="text-slate-400 text-sm mt-1">Upload your Excel or CSV file with recipient data</p>
+        <h1 className="text-2xl font-bold text-slate-100">Import Recipients</h1>
+        <p className="text-slate-400 text-sm mt-1">Connect a Google Sheet or upload an Excel or CSV file with recipient data</p>
       </div>
 
       {!sheetData ? (
         <>
+          <form onSubmit={handleGoogleImport} className="card mb-5">
+            <label htmlFor="sheet-url" className="text-sm font-medium text-slate-300">Google Sheet link</label>
+            <p className="text-slate-500 text-xs mt-1 mb-3">
+              Reads the tab in the link using your connected Google account. New rows added later can be emailed automatically.
+            </p>
+            <div className="flex gap-2">
+              <input
+                id="sheet-url"
+                type="url"
+                required
+                value={sheetUrl}
+                onChange={e => setSheetUrl(e.target.value)}
+                placeholder="https://docs.google.com/spreadsheets/d/…"
+                className="input-field flex-1"
+              />
+              <button type="submit" disabled={loading} className="btn-primary whitespace-nowrap">
+                {loading ? 'Reading…' : 'Connect Sheet'}
+              </button>
+            </div>
+          </form>
+
+          <p className="text-center text-slate-500 text-xs mb-5">or upload a file</p>
+
           <button
             type="button"
             disabled={loading}
@@ -103,12 +152,12 @@ export default function ImportSheet() {
                 </svg>
               </div>
               <div>
-                <p className="text-slate-100 text-sm font-medium">{wizard.sheetFile?.name || 'Uploaded file'}</p>
+                <p className="text-slate-100 text-sm font-medium">{wizard.sheetFile?.name || 'Uploaded file'}{wizard.sheetUrl && <span className="ml-2 text-xs font-normal text-green-400">Google Sheet</span>}</p>
                 <p className="text-slate-500 text-xs">{sheetData.rows.length} rows · {headers.length} columns</p>
               </div>
             </div>
             <button
-              onClick={() => { updateWizard({ sheetData: null, sheetFile: null }); setValidationResult(null) }}
+              onClick={() => { updateWizard({ sheetData: null, sheetFile: null, sheetUrl: '' }); setValidationResult(null) }}
               className="text-sm text-slate-400 hover:text-slate-300"
             >
               Change
