@@ -28,6 +28,7 @@ const api = {
       form.append('file', file)
       return fetch(`${BASE}/sheet/upload`, { method: 'POST', body: form }).then(r => r.json())
     },
+    fromGoogle: (url) => call('POST', '/sheet/google', { url }),
     validate: (params) => call('POST', '/sheet/validate', params)
   },
 
