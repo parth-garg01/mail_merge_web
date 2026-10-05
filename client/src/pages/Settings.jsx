@@ -43,7 +43,7 @@ export default function Settings() {
   }
 
   async function handleConnect() {
-    if (!settings?.googleClientId || !settings?.googleClientSecret) {
+    if (!settings?.googleClientId || !(settings?.googleClientSecret || settings?.hasGoogleClientSecret)) {
       setAuthMsg('Enter your Google Client ID and Secret first, then save settings.')
       return
     }
@@ -156,7 +156,7 @@ export default function Settings() {
         <div className="card">
           <h3 className="text-sm font-semibold text-slate-200 mb-1">Google OAuth Credentials</h3>
           <p className="text-slate-500 text-xs mb-4">
-            Create at <span className="text-indigo-400">console.cloud.google.com</span> → Gmail API → OAuth 2.0 Client ID (Web app) → Authorized redirect URI: <span className="text-indigo-400 font-mono text-xs">http://localhost:5000/oauth2callback</span>
+            Create at <span className="text-indigo-400">console.cloud.google.com</span> → Gmail API → OAuth 2.0 Client ID (Web app) → Authorized redirect URI: <span className="text-indigo-400 font-mono text-xs break-all">{settings.redirectUri}</span>
           </p>
           <div className="space-y-3">
             <div>
@@ -165,7 +165,7 @@ export default function Settings() {
             </div>
             <div>
               <label className="label">Client Secret</label>
-              <input type="password" value={settings.googleClientSecret || ''} onChange={e => update({ googleClientSecret: e.target.value })} placeholder="GOCSPX-…" className="input-field" />
+              <input type="password" value={settings.googleClientSecret || ''} onChange={e => update({ googleClientSecret: e.target.value })} placeholder={settings.hasGoogleClientSecret ? 'Saved. Leave blank to keep it.' : 'GOCSPX-…'} autoComplete="off" className="input-field" />
             </div>
           </div>
         </div>
