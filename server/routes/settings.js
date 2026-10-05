@@ -21,8 +21,7 @@ module.exports = function (configStore) {
     if (settings.googleClientId && settings.googleClientSecret) {
       configStore.set('googleClientId', settings.googleClientId)
       configStore.set('googleClientSecret', settings.googleClientSecret)
-      const redirectUri = process.env.REDIRECT_URI || 'http://localhost:5000/oauth2callback'
-      gmailClient.init(settings.googleClientId, settings.googleClientSecret, redirectUri)
+      gmailClient.init(settings.googleClientId, settings.googleClientSecret)
     }
     res.json({ success: true })
   })

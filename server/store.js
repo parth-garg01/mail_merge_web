@@ -1,9 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const os = require('os')
-
-const DATA_DIR = path.join(os.homedir(), '.smart-mail-merger-web')
-fs.mkdirSync(DATA_DIR, { recursive: true })
+const { DATA_DIR } = require('./config')
 
 class Store {
   constructor(name) {

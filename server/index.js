@@ -5,6 +5,7 @@ const { WebSocketServer } = require('ws')
 const http = require('http')
 const path = require('path')
 
+const { PORT, PUBLIC_URL } = require('./config')
 const Store = require('./store')
 const gmailClient = require('./lib/GmailClient')
 const logger = require('./lib/Logger')
@@ -93,13 +94,10 @@ app.get('*', (req, res) => {
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 5000
-const REDIRECT_URI = process.env.REDIRECT_URI || `http://localhost:${PORT}/oauth2callback`
-
 const clientId = configStore.get('googleClientId', process.env.GOOGLE_CLIENT_ID || '')
 const clientSecret = configStore.get('googleClientSecret', process.env.GOOGLE_CLIENT_SECRET || '')
 if (clientId && clientSecret) {
-  gmailClient.init(clientId, clientSecret, REDIRECT_URI)
+  gmailClient.init(clientId, clientSecret)
 }
 
 // Resume any campaigns that were running before a server restart
@@ -118,5 +116,5 @@ for (const [id, c] of Object.entries(campaigns)) {
 }
 
 server.listen(PORT, () => {
-  console.log(`Smart Mail Merger running at http://localhost:${PORT}`)
+  console.log(`Smart Mail Merger running at ${PUBLIC_URL}`)
 })

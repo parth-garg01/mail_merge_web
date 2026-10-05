@@ -1,6 +1,7 @@
 const { google } = require('googleapis')
 const fs = require('fs')
 const Store = require('../store')
+const { REDIRECT_URI } = require('../config')
 
 const tokenStore = new Store('auth-tokens')
 
@@ -26,7 +27,7 @@ class GmailClient {
     this.oauth2Client = null
   }
 
-  init(clientId, clientSecret, redirectUri = 'http://localhost:5000/oauth2callback') {
+  init(clientId, clientSecret, redirectUri = REDIRECT_URI) {
     this.oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri)
 
     const stored = tokenStore.get('tokens')

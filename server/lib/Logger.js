@@ -1,8 +1,8 @@
 const fs = require('fs')
 const path = require('path')
-const os = require('os')
+const { DATA_DIR } = require('../config')
 
-const LOGS_DIR = path.join(os.homedir(), '.smart-mail-merger-web', 'logs')
+const LOGS_DIR = path.join(DATA_DIR, 'logs')
 fs.mkdirSync(LOGS_DIR, { recursive: true })
 
 class Logger {

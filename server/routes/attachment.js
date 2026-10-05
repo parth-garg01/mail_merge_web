@@ -1,11 +1,11 @@
 const express = require('express')
 const multer = require('multer')
 const path = require('path')
-const os = require('os')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid')
+const { DATA_DIR } = require('../config')
 
-const ATTACH_DIR = path.join(os.homedir(), '.smart-mail-merger-web', 'attachments')
+const ATTACH_DIR = path.join(DATA_DIR, 'attachments')
 if (!fs.existsSync(ATTACH_DIR)) fs.mkdirSync(ATTACH_DIR, { recursive: true })
 
 const storage = multer.diskStorage({
