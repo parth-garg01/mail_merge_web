@@ -2,3 +2,6 @@ node_modules/
 server/public/
 .env
 *.log
+graphify-out/
+.graphify_*
+data/
