@@ -30,7 +30,7 @@ const server = http.createServer(app)
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
-const wss = new WebSocketServer({ server, path: '/ws' })
+const wss = new WebSocketServer({ noServer: true })
 
 function broadcast(event, data) {
   const msg = JSON.stringify({ event, data })
@@ -64,6 +64,16 @@ const sessionParser = session({
   cookie: { secure: 'auto', httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 }
 })
 app.use(sessionParser)
+
+// Live campaign events carry recipient addresses, so the socket needs the same
+// unlocked session as the API.
+server.on('upgrade', (req, socket, head) => {
+  if (new URL(req.url, 'http://x').pathname !== '/ws') return socket.destroy()
+  sessionParser(req, {}, () => {
+    if (configStore.get('appPasswordHash') && !req.session?.unlocked) return socket.destroy()
+    wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req))
+  })
+})
 
 // Auth guard — all /api routes except /api/auth require unlock when password is set
 app.use('/api', (req, res, next) => {
