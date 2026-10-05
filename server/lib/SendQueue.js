@@ -72,6 +72,15 @@ class SendQueue {
     return { success: true, recipient: queue[idx] }
   }
 
+  // A restart mid-send leaves a recipient in "sending" forever; put it back in line.
+  // ponytail: if the crash hit after Gmail accepted but before we saved, this
+  // re-sends that one email. Store the Gmail message id first if that matters.
+  recoverSending(campaignId) {
+    const queue = this.getQueue(campaignId)
+    if (!queue.some(r => r.status === 'sending')) return
+    this.setQueue(campaignId, queue.map(r => r.status === 'sending' ? { ...r, status: 'pending' } : r))
+  }
+
   getNext(campaignId) {
     const queue = this.getQueue(campaignId)
     return queue.find(r => r.status === 'pending') || null

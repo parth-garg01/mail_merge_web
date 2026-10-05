@@ -12,6 +12,7 @@ const { hashPwd } = require('./routes/auth')
 const gmailClient = require('./lib/GmailClient')
 const logger = require('./lib/Logger')
 const runner = require('./runner')
+const sendQueue = require('./lib/SendQueue')
 
 const configStore = new Store('app-config')
 
@@ -146,6 +147,7 @@ for (const [id, c] of Object.entries(campaigns)) {
         store.set('campaigns', all)
       }
     }
+    sendQueue.recoverSending(id)
     runner.runCampaign(id, c, makeSave(configStore))
   }
 }
