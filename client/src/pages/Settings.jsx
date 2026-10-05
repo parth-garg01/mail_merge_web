@@ -222,7 +222,7 @@ export default function Settings() {
             )}
             <div>
               <label className="label">{hasPassword ? 'New Password' : 'Password'}</label>
-              <input type="password" value={pwdNew} onChange={e => setPwdNew(e.target.value)} placeholder="At least 4 characters" className="input-field" />
+              <input type="password" value={pwdNew} onChange={e => setPwdNew(e.target.value)} placeholder="At least 8 characters" className="input-field" />
             </div>
             <div>
               <label className="label">Confirm Password</label>

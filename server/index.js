@@ -6,13 +6,24 @@ const http = require('http')
 const path = require('path')
 const crypto = require('crypto')
 
-const { PORT, PUBLIC_URL } = require('./config')
+const { PORT, PUBLIC_URL, IS_PROD } = require('./config')
 const Store = require('./store')
+const { hashPwd } = require('./routes/auth')
 const gmailClient = require('./lib/GmailClient')
 const logger = require('./lib/Logger')
 const runner = require('./runner')
 
 const configStore = new Store('app-config')
+
+// APP_PASSWORD seeds the first password. A hosted copy is reachable by anyone
+// with the URL, so it refuses to start without one.
+if (process.env.APP_PASSWORD && !configStore.get('appPasswordHash')) {
+  configStore.set('appPasswordHash', hashPwd(process.env.APP_PASSWORD))
+}
+if (IS_PROD && !configStore.get('appPasswordHash')) {
+  console.error('Refusing to start: set APP_PASSWORD so the hosted app is not open to everyone.')
+  process.exit(1)
+}
 
 const app = express()
 const server = http.createServer(app)
