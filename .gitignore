@@ -5,3 +5,4 @@ server/public/
 graphify-out/
 .graphify_*
 data/
+.playwright-mcp/
