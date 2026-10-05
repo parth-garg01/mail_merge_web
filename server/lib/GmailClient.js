@@ -1,7 +1,8 @@
 const { google } = require('googleapis')
 const fs = require('fs')
 const Store = require('../store')
-const { REDIRECT_URI } = require('../config')
+const path = require('path')
+const { REDIRECT_URI, DATA_DIR } = require('../config')
 
 const tokenStore = new Store('auth-tokens')
 
@@ -116,7 +117,9 @@ class GmailClient {
     ]
 
     for (const att of attachments) {
-      const content = fs.readFileSync(att.path)
+      // Only the file name is trusted: campaigns come from request bodies, and the
+      // data dir can move between hosts.
+      const content = fs.readFileSync(path.join(DATA_DIR, 'attachments', path.basename(att.path)))
       const safeName = att.name.replace(/"/g, '')
       lines.push(
         '',

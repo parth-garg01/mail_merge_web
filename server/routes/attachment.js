@@ -34,7 +34,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
 
 router.delete('/:id', (req, res) => {
   const files = fs.readdirSync(ATTACH_DIR)
-  const file = files.find(f => f.startsWith(req.params.id))
+  const file = files.find(f => path.parse(f).name === req.params.id)
   if (file) {
     try { fs.unlinkSync(path.join(ATTACH_DIR, file)) } catch {}
   }
